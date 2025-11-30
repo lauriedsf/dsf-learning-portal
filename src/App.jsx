@@ -1,6 +1,7 @@
 import { useState } from "react";
 import logoDSF from "./assets/logo-dsf.png";
 import digiGuide from "./assets/digi-guide.png";
+import digiTablet from "./assets/digi-tablet.png";
 
 /* ---------- DATA ---------- */
 
@@ -107,6 +108,7 @@ const PATHS = {
 };
 
 /* ---------- APP ---------- */
+
 export default function App() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeMainTab, setActiveMainTab] = useState("allCourses");
@@ -114,7 +116,7 @@ export default function App() {
   const [activeModuleUrl, setActiveModuleUrl] = useState(null);
 
   // Courses filtered by main tab
-  let coursesBySection =
+  const coursesBySection =
     activeMainTab === "myCourses"
       ? COURSES.filter((c) => c.isMine)
       : COURSES;
@@ -139,6 +141,7 @@ export default function App() {
   const closePath = () => {
     setSelectedCourse(null);
   };
+
   const openModule = (url) => {
     setActiveModuleUrl(url);
   };
@@ -155,7 +158,7 @@ export default function App() {
       {/* Main content */}
       <main className="flex-1 pt-20 pb-20">
         <div className="mx-auto max-w-5xl px-4 py-4 space-y-6">
-          <PageHeader />
+          <PageHeader activeMainTab={activeMainTab} />
 
           {showProgressHeader && (
             <ProgressHeader completed={0} total={8} badges={0} />
@@ -170,10 +173,7 @@ export default function App() {
                 setActiveCategory={setActiveCategory}
               />
 
-              <CourseGrid
-                courses={filteredCourses}
-                onOpenPath={openPath}
-              />
+              <CourseGrid courses={filteredCourses} onOpenPath={openPath} />
             </>
           )}
         </div>
@@ -187,20 +187,20 @@ export default function App() {
 
       {/* Path modal */}
       {selectedCourse && (
-  <PathModal
-    course={selectedCourse}
-    onClose={closePath}
-    onStartModule={openModule}
-  />
-)}
+        <PathModal
+          course={selectedCourse}
+          onClose={closePath}
+          onStartModule={openModule}
+        />
+      )}
 
-{activeModuleUrl && (
-  <LearningModule launchUrl={activeModuleUrl} onClose={closeModule} />
-)}
+      {/* Learning module viewer */}
+      {activeModuleUrl && (
+        <LearningModule launchUrl={activeModuleUrl} onClose={closeModule} />
+      )}
     </div>
   );
 }
-
 
 /* ---------- HEADER ---------- */
 
@@ -225,59 +225,79 @@ function Header() {
 
 /* ---------- MAIN CONTENT ---------- */
 
-function PageHeader() {
+function PageHeader({ activeMainTab }) {
+  const title = "My DSF learning portal";
+  const subtitle =
+    "Explore learning paths to build your digital and financial skills.";
+
+  const showDigiOnAllCourses = activeMainTab === "allCourses";
+
   return (
-    <section className="space-y-1 mt-2">
-      <h1 className="text-2xl font-semibold text-[#2e4053]">
-        My learning hub
-      </h1>
-      <p className="text-sm text-[#2e4053]/70">
-        Explore learning paths to build your digital and financial skills.
-      </p>
-    </section>
+    <header className="space-y-4">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-[#2e4053]">
+          {title}
+        </h1>
+        <p className="text-sm text-[#2e4053]/70 mt-1">{subtitle}</p>
+      </div>
+
+      {showDigiOnAllCourses && (
+        <div className="flex justify-center sm:justify-start">
+          <img
+            src={digiTablet}
+            alt="Digi, your learning guide"
+            className="h-32 w-auto drop-shadow-sm"
+          />
+        </div>
+      )}
+    </header>
   );
 }
+
+/* ---------- PROGRESS HEADER & DETAILS ---------- */
 
 function ProgressHeader({ completed, total, badges }) {
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
   return (
-    <section className="rounded-3xl bg-gradient-to-r from-[#f9b13c]/20 via-[#ef7d00]/15 to-[#0e5988]/10 p-6 shadow-sm border border-[#f9b13c]/40">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold text-[#2e4053] flex items-center gap-2">
+    <section className="bg-gradient-to-r from-[#fff7ec] to-[#ffeef5] border border-[#fbe2c0] rounded-3xl p-4 sm:p-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-[#2e4053] flex items-center gap-2">
             <span>🎯 My progress</span>
-          </h2>
-          <p className="text-xs text-[#2e4053]/70">
+          </p>
+          <p className="text-xs text-[#2e4053]/70 mt-1">
             Track your learning paths and badges in one place.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 w-full md:w-auto">
-          <div className="rounded-2xl bg-white/80 px-4 py-3 shadow-sm border border-white">
-            <div className="text-xs text-[#2e4053]/70">Completed courses</div>
-            <div className="text-lg font-semibold text-[#2e4053]">
+        <div className="flex gap-3 text-right">
+          <div>
+            <div className="text-[11px] text-[#2e4053]/60">
+              Completed courses
+            </div>
+            <div className="text-sm font-semibold text-[#2e4053]">
               {completed} / {total}
             </div>
           </div>
-          <div className="rounded-2xl bg-white/80 px-4 py-3 shadow-sm border border-white">
-            <div className="text-xs text-[#2e4053]/70">Badges earned</div>
-            <div className="text-lg font-semibold text-[#2e4053]">
+          <div>
+            <div className="text-[11px] text-[#2e4053]/60">Badges earned</div>
+            <div className="text-sm font-semibold text-[#2e4053]">
               {badges}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-4">
-        <div className="flex justify-between text-[11px] text-[#2e4053]/70 mb-1">
-          <span>{percent}% completed</span>
-        </div>
+      <div className="mt-1">
         <div className="h-2 rounded-full bg-white/70 overflow-hidden">
           <div
-            className="h-full rounded-full bg-[#ef7d00] transition-all"
+            className="h-full bg-[#ef7d00] rounded-full"
             style={{ width: `${percent}%` }}
           />
+        </div>
+        <div className="mt-1 text-[11px] text-[#2e4053]/60">
+          {percent}% completed
         </div>
       </div>
     </section>
@@ -286,17 +306,20 @@ function ProgressHeader({ completed, total, badges }) {
 
 function ProgressDetails() {
   return (
-    <section className="mt-2 rounded-2xl bg-white border border-[#eae4df] p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-[#2e4053] mb-1">
-        Progress overview
-      </h3>
+    <section className="bg-white rounded-3xl border border-[#eae4df] p-4 sm:p-5 space-y-3">
+      <h2 className="text-sm font-semibold text-[#2e4053]">
+        Your learning insights
+      </h2>
       <p className="text-xs text-[#2e4053]/70">
-        This view will show a detailed breakdown of your progress by topic,
-        badges and time spent. For now, it only shows the summary above.
+        Here you will see detailed information about your completed courses,
+        badges and learning streaks. This space can be connected later to real
+        analytics from Moodle or the national platform.
       </p>
     </section>
   );
 }
+
+/* ---------- CATEGORY TABS & COURSES GRID ---------- */
 
 function CategoryTabs({ activeCategory, setActiveCategory }) {
   return (
@@ -308,10 +331,10 @@ function CategoryTabs({ activeCategory, setActiveCategory }) {
             key={tab.id}
             onClick={() => setActiveCategory(tab.id)}
             className={
-              "rounded-full px-4 py-2 text-xs font-medium border transition " +
+              "px-3 py-1.5 rounded-full text-xs font-medium border transition " +
               (isActive
                 ? "bg-[#2e4053] text-white border-[#2e4053]"
-                : "bg-white text-[#2e4053]/70 border-[#eae4df] hover:border-[#2e4053]/50")
+                : "bg-white text-[#2e4053]/70 border-[#eae4df] hover:bg-[#f9f3ec]")
             }
           >
             {tab.label}
@@ -325,52 +348,54 @@ function CategoryTabs({ activeCategory, setActiveCategory }) {
 function CourseGrid({ courses, onOpenPath }) {
   if (courses.length === 0) {
     return (
-      <p className="text-sm text-[#2e4053]/70 mt-4">
-        No course available in this section yet.
+      <p className="text-xs text-[#2e4053]/60 mt-4">
+        No courses in this category yet.
       </p>
     );
   }
 
   return (
-    <div className="grid gap-4 pt-4 md:grid-cols-3">
+    <section className="grid gap-4 mt-4 sm:grid-cols-2">
       {courses.map((course) => (
-        <CourseCard key={course.id} course={course} onOpenPath={onOpenPath} />
+        <CourseCard
+          key={course.id}
+          course={course}
+          onOpenPath={() => onOpenPath(course)}
+        />
       ))}
-    </div>
+    </section>
   );
 }
 
 function CourseCard({ course, onOpenPath }) {
   return (
-    <article className="flex flex-col justify-between rounded-2xl bg-white p-6 shadow-sm border border-[#eae4df]">
-      <div className="space-y-3">
+    <article className="bg-white rounded-3xl border border-[#eae4df] p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+      <div className="space-y-2">
         <span
           className={
-            "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold " +
+            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold " +
             course.categoryColor
           }
         >
           {course.category}
         </span>
 
-        <h3 className="text-base font-semibold text-[#2e4053]">
+        <h3 className="text-sm font-semibold text-[#2e4053]">
           {course.title}
         </h3>
-        <p className="text-xs text-[#2e4053]/70">
-          {course.subtitle}
-        </p>
+        <p className="text-xs text-[#2e4053]/70">{course.subtitle}</p>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-[11px] text-[#2e4053]/70">
+      <div className="mt-4 flex items-center justify-between text-[11px] text-[#2e4053]/60">
         <span>{course.lessons} lessons</span>
         <span>{course.duration} min</span>
       </div>
 
       <button
-        onClick={() => onOpenPath(course)}
-        className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#ef7d00] px-4 py-2 text-xs font-semibold text-white hover:bg-[#f9b13c] transition"
+        onClick={onOpenPath}
+        className="mt-3 inline-flex items-center justify-center rounded-full bg-[#ef7d00] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#f9b13c] transition"
       >
-        🗺️ Start this path
+        Start this path
       </button>
     </article>
   );
@@ -417,17 +442,19 @@ function PathModal({ course, onClose, onStartModule }) {
   if (!path) {
     return (
       <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
-        <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df]">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df] relative">
+          {/* Bouton close en haut à droite */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-sm text-[#2e4053]/60 hover:text-[#2e4053]"
+          >
+            ✕
+          </button>
+
+          <div className="flex justify-between items-center mb-3 pr-6">
             <h2 className="text-sm font-semibold text-[#2e4053]">
               Path not yet configured
             </h2>
-            <button
-              onClick={onClose}
-              className="text-xs text-[#2e4053]/60 hover:text-[#2e4053]"
-            >
-              ✕
-            </button>
           </div>
           <p className="text-xs text-[#2e4053]/70">
             The learning path for this course will be added later.
@@ -443,9 +470,17 @@ function PathModal({ course, onClose, onStartModule }) {
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df]">
-        {/* Header with Digi */}
-        <div className="flex justify-between items-start gap-4 mb-4">
+      <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df] relative">
+        {/* Bouton close en haut à droite */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-sm text-[#2e4053]/60 hover:text-[#2e4053]"
+        >
+          ✕
+        </button>
+
+        {/* Header avec Digi */}
+        <div className="flex justify-between items-start gap-4 mb-4 pr-6">
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-[#2e4053]">
               {path.title}
@@ -455,19 +490,11 @@ function PathModal({ course, onClose, onStartModule }) {
             </p>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <img
-              src={digiGuide}
-              alt="Digi, your learning guide"
-              className="h-12 w-auto"  // <- plus de hidden sm:block
-            />
-            <button
-              onClick={onClose}
-              className="text-sm text-[#2e4053]/60 hover:text-[#2e4053]"
-            >
-              ✕
-            </button>
-          </div>
+          <img
+            src={digiGuide}
+            alt="Digi, your learning guide"
+            className="h-12 w-auto"
+          />
         </div>
 
         {/* Steps + Launch button */}
@@ -537,6 +564,9 @@ function PathStep({ step, isLast }) {
     </div>
   );
 }
+
+
+/* ---------- LEARNING MODULE VIEWER ---------- */
 
 function LearningModule({ launchUrl, onClose }) {
   return (
