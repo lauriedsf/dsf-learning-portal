@@ -2,6 +2,9 @@ import { useState } from "react";
 import logoDSF from "./assets/logo-dsf.png";
 import digiGuide from "./assets/digi-guide.png";
 import digiTablet from "./assets/digi-tablet.png";
+import petalOrange from "./assets/petale-orange.png";
+import petaleBlanc from "./assets/petale-blanc.png";
+
 
 /* ---------- DATA ---------- */
 
@@ -226,35 +229,56 @@ function Header() {
 /* ---------- MAIN CONTENT ---------- */
 
 function PageHeader({ activeMainTab }) {
-  const title = "My DSF learning portal";
+  const title = "My DSF Learning Portal";
   const subtitle =
     "Explore learning paths to build your digital and financial skills.";
 
-  const showDigiOnAllCourses = activeMainTab === "allCourses";
-
   return (
-    <header className="space-y-4">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-[#2e4053]">
-          {title}
-        </h1>
-        <p className="text-sm text-[#2e4053]/70 mt-1">{subtitle}</p>
-      </div>
+    <header className="mt-1">
+      <div className="relative overflow-hidden rounded-3xl border border-[#f3d5aa] bg-gradient-to-r from-[#ef7d00] via-[#f9b13c] to-[#ef7d00] px-5 py-4 sm:py-5 shadow-md text-white">
+        {/* éventuelles pétales orange de fond, si tu les veux encore */}
+        {/* 
+        <img ... petalOrange ... />
+        */}
 
-      {showDigiOnAllCourses && (
-        <div className="flex justify-center sm:justify-start">
-          <img
-            src={digiTablet}
-            alt="Digi, your learning guide"
-            className="h-32 w-auto drop-shadow-sm"
-          />
+        <div className="relative flex items-stretch gap-4 sm:gap-6">
+          {/* Colonne texte */}
+          <div className="flex-1 space-y-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide">
+              <span>✨</span>
+              <span>DSF Learning</span>
+            </span>
+
+            <h1 className="text-xl sm:text-2xl font-semibold">
+              {title}
+            </h1>
+
+            <p className="text-xs sm:text-sm text-[#fff7ec] max-w-md">
+              {subtitle}
+            </p>
+          </div>
+
+          {/* Colonne graphique : pétale en fond + Digi devant */}
+          <div
+            className="w-28 sm:w-40 flex items-end justify-center"
+            style={{
+              backgroundImage: `url(${petaleBlanc})`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center bottom",
+              backgroundSize: "contain",
+            }}
+          >
+            <img
+              src={digiTablet}
+              alt="Digi holding a tablet"
+              className="h-16 sm:h-20 w-auto drop-shadow-lg mb-1 sm:mb-5"
+            />
+          </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }
-
-/* ---------- PROGRESS HEADER & DETAILS ---------- */
 
 function ProgressHeader({ completed, total, badges }) {
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
@@ -323,7 +347,7 @@ function ProgressDetails() {
 
 function CategoryTabs({ activeCategory, setActiveCategory }) {
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex flex-wrap gap-2 mt-3">
       {CATEGORY_TABS.map((tab) => {
         const isActive = tab.id === activeCategory;
         return (
@@ -400,6 +424,7 @@ function CourseCard({ course, onOpenPath }) {
     </article>
   );
 }
+
 
 /* ---------- BOTTOM NAV ---------- */
 
