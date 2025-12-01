@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logoDSF from "./assets/logo-dsf.png";
 import digiGuide from "./assets/digi-guide.png";
 import digiTablet from "./assets/digi-tablet.png";
-import petalOrange from "./assets/petale-orange.png";
 import petaleBlanc from "./assets/petale-blanc.png";
-
+import badgeOnlineBankStarter from "./assets/Badge_OnlineBankStarter.png";
+import digiWelldone from "./assets/digi-welldone.png";
 
 /* ---------- DATA ---------- */
 
@@ -110,6 +110,61 @@ const PATHS = {
   },
 };
 
+/* ---------- BADGES & QUIZ DATA ---------- */
+/* On choisit UNE seule clé et on la garde partout: "online-bank-starter" */
+
+const BADGES = {
+  "online-bank-starter": {
+    id: "online-bank-starter",
+    icon: "💳",
+    title: "Online Bank Starter",
+    description: "Completed the introduction to online banking quiz.",
+    image: badgeOnlineBankStarter,
+  },
+};
+
+const QUIZ_INTRO_ONLINE_BANKING = [
+  {
+    id: 1,
+    question: "What is the main advantage of using online banking?",
+    answers: [
+      { text: "You can access your bank 24/7 from anywhere", correct: true },
+      { text: "You never need a password again", correct: false },
+      { text: "The bank will automatically send you money", correct: false },
+    ],
+  },
+  {
+    id: 2,
+    question: "What do you need to log in to your online banking safely?",
+    answers: [
+      { text: "Your user ID and a strong password", correct: true },
+      { text: "Just your first name", correct: false },
+      {
+        text: "Any password that is easy to remember, like 1234",
+        correct: false,
+      },
+    ],
+  },
+  {
+    id: 3,
+    question: "Which of these actions is the safest?",
+    answers: [
+      {
+        text: "Logging in only on trusted devices and secure networks",
+        correct: true,
+      },
+      {
+        text: "Sharing your password with a friend if you need help",
+        correct: false,
+      },
+      {
+        text: "Clicking any link you receive by SMS about your bank",
+        correct: false,
+      },
+    ],
+  },
+];
+
 /* ---------- APP ---------- */
 
 export default function App() {
@@ -117,6 +172,42 @@ export default function App() {
   const [activeMainTab, setActiveMainTab] = useState("allCourses");
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [activeModuleUrl, setActiveModuleUrl] = useState(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [badges, setBadges] = useState([]);
+  const [lastEarnedBadge, setLastEarnedBadge] = useState(null);
+
+  // Charger les badges depuis le navigateur
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("dsfBadges");
+      if (stored) {
+        setBadges(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Cannot load badges from storage", e);
+    }
+  }, []);
+
+  // Sauvegarder les badges dès qu'ils changent
+  useEffect(() => {
+    try {
+      localStorage.setItem("dsfBadges", JSON.stringify(badges));
+    } catch (e) {
+      console.error("Cannot save badges to storage", e);
+    }
+  }, [badges]);
+
+  const awardBadge = (badgeId) => {
+    const badge = BADGES[badgeId];
+    if (!badge) return;
+
+    const alreadyHas = badges.some((b) => b.id === badgeId);
+    if (alreadyHas) return;
+
+    const newBadge = BADGES[badgeId];
+    setBadges((prev) => [...prev, newBadge]);
+    setLastEarnedBadge(newBadge);
+  };
 
   // Courses filtered by main tab
   const coursesBySection =
@@ -150,7 +241,14 @@ export default function App() {
   };
 
   const closeModule = () => {
+    const wasIntroModule =
+      activeModuleUrl === PATHS["intro-online-banking"].steps[0].launchUrl;
+
     setActiveModuleUrl(null);
+
+    if (wasIntroModule) {
+      setShowQuiz(true);
+    }
   };
 
   return (
@@ -163,11 +261,34 @@ export default function App() {
         <div className="mx-auto max-w-5xl px-4 py-4 space-y-6">
           <PageHeader activeMainTab={activeMainTab} />
 
-          {showProgressHeader && (
-            <ProgressHeader completed={0} total={8} badges={0} />
+          {/* Digi badge message */}
+          {lastEarnedBadge && activeMainTab === "myProgress" && (
+            <DigiBadgeMessage
+              badge={lastEarnedBadge}
+              context="myProgress"
+              onClose={() => setLastEarnedBadge(null)}
+            />
           )}
 
-          {activeMainTab === "myProgress" && <ProgressDetails />}
+          {lastEarnedBadge && activeMainTab !== "myProgress" && (
+            <DigiBadgeMessage
+              badge={lastEarnedBadge}
+              context="default"
+              onClose={() => setLastEarnedBadge(null)}
+            />
+          )}
+
+          {showProgressHeader && (
+            <ProgressHeader
+              completed={0}
+              total={8}
+              badges={badges.length}
+            />
+          )}
+
+          {activeMainTab === "myProgress" && (
+            <ProgressDetails badges={badges} />
+          )}
 
           {showCourses && (
             <>
@@ -175,8 +296,10 @@ export default function App() {
                 activeCategory={activeCategory}
                 setActiveCategory={setActiveCategory}
               />
-
-              <CourseGrid courses={filteredCourses} onOpenPath={openPath} />
+              <CourseGrid
+                courses={filteredCourses}
+                onOpenPath={openPath}
+              />
             </>
           )}
         </div>
@@ -192,14 +315,29 @@ export default function App() {
       {selectedCourse && (
         <PathModal
           course={selectedCourse}
+          badges={badges}
           onClose={closePath}
           onStartModule={openModule}
         />
       )}
 
-      {/* Learning module viewer */}
+      {/* Learning module */}
       {activeModuleUrl && (
         <LearningModule launchUrl={activeModuleUrl} onClose={closeModule} />
+      )}
+
+      {/* Quiz modal */}
+      {showQuiz && (
+        <QuizModal
+          questions={QUIZ_INTRO_ONLINE_BANKING}
+          badgeId="online-bank-starter"
+          onFinish={({ score, badgeId }) => {
+            if (badgeId) {
+              awardBadge(badgeId);
+            }
+            setShowQuiz(false);
+          }}
+        />
       )}
     </div>
   );
@@ -228,7 +366,7 @@ function Header() {
 
 /* ---------- MAIN CONTENT ---------- */
 
-function PageHeader({ activeMainTab }) {
+function PageHeader() {
   const title = "My DSF Learning Portal";
   const subtitle =
     "Explore learning paths to build your digital and financial skills.";
@@ -236,11 +374,6 @@ function PageHeader({ activeMainTab }) {
   return (
     <header className="mt-1">
       <div className="relative overflow-hidden rounded-3xl border border-[#f3d5aa] bg-gradient-to-r from-[#ef7d00] via-[#f9b13c] to-[#ef7d00] px-5 py-4 sm:py-5 shadow-md text-white">
-        {/* éventuelles pétales orange de fond, si tu les veux encore */}
-        {/* 
-        <img ... petalOrange ... />
-        */}
-
         <div className="relative flex items-stretch gap-4 sm:gap-6">
           {/* Colonne texte */}
           <div className="flex-1 space-y-2">
@@ -249,9 +382,7 @@ function PageHeader({ activeMainTab }) {
               <span>DSF Learning</span>
             </span>
 
-            <h1 className="text-xl sm:text-2xl font-semibold">
-              {title}
-            </h1>
+            <h1 className="text-xl sm:text-2xl font-semibold">{title}</h1>
 
             <p className="text-xs sm:text-sm text-[#fff7ec] max-w-md">
               {subtitle}
@@ -285,7 +416,7 @@ function ProgressHeader({ completed, total, badges }) {
 
   return (
     <section className="bg-gradient-to-r from-[#fff7ec] to-[#ffeef5] border border-[#fbe2c0] rounded-3xl p-4 sm:p-5 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify_between gap-4">
         <div>
           <p className="text-sm font-semibold text-[#2e4053] flex items-center gap-2">
             <span>🎯 My progress</span>
@@ -328,18 +459,77 @@ function ProgressHeader({ completed, total, badges }) {
   );
 }
 
-function ProgressDetails() {
+function ProgressDetails({ badges }) {
   return (
-    <section className="bg-white rounded-3xl border border-[#eae4df] p-4 sm:p-5 space-y-3">
-      <h2 className="text-sm font-semibold text-[#2e4053]">
-        Your learning insights
-      </h2>
-      <p className="text-xs text-[#2e4053]/70">
-        Here you will see detailed information about your completed courses,
-        badges and learning streaks. This space can be connected later to real
-        analytics from Moodle or the national platform.
-      </p>
+    <section className="space-y-4">
+      <h2 className="text-lg font-semibold text-[#2e4053]">My achievements</h2>
+
+      {badges.length === 0 && (
+        <p className="text-xs text-[#2e4053]/60">
+          You have not earned any badges yet.
+        </p>
+      )}
+
+      {badges.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 max-w-xl">
+          {badges.map((badge) => (
+            <div
+              key={badge.id}
+              className="flex items-center gap-3 rounded-2xl border border-[#f3d5aa] bg-[#fff7ec] px-3 py-2 shadow-sm h-full"
+            >
+              {badge.image ? (
+                <img
+                  src={badge.image}
+                  alt={badge.title}
+                  className="h-10 w-auto"
+                />
+              ) : (
+                <span className="text-lg">{badge.icon}</span>
+              )}
+
+              <div>
+                <div className="text-xs font-semibold text-[#2e4053]">
+                  {badge.title}
+                </div>
+                <div className="text-[10px] text-[#2e4053]/70">
+                  {badge.description}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
+  );
+}
+
+function DigiBadgeMessage({ badge, context, onClose }) {
+  if (!badge) return null;
+
+  const baseText = "Digi: Well done!";
+  const detailText =
+    context === "myProgress"
+      ? `You have just earned the badge ${badge.title}.`
+      : `You have just earned the badge ${badge.title}. You can find it in your "My progress" tab.`;
+
+  return (
+    <div className="rounded-3xl border border-[#eae4df] bg-white px-4 py-3 flex items-center gap-3 shadow-sm">
+      <img src={digiWelldone} alt="Digi well done" className="h-10 w-auto" />
+      <div className="flex-1">
+        <div className="text-xs font-semibold text-[#2e4053]">
+          {baseText}
+        </div>
+        <div className="text-[11px] text-[#2e4053]/70">{detailText}</div>
+      </div>
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="text-xs text-[#2e4053]/50 hover:text-[#2e4053]"
+        >
+          ✕
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -425,7 +615,6 @@ function CourseCard({ course, onOpenPath }) {
   );
 }
 
-
 /* ---------- BOTTOM NAV ---------- */
 
 function BottomNav({ activeMainTab, setActiveMainTab }) {
@@ -458,54 +647,212 @@ function BottomNav({ activeMainTab, setActiveMainTab }) {
   );
 }
 
-/* ---------- PATH MODAL ---------- */
+/* ---------- QUIZ COMPONENT ---------- */
 
-function PathModal({ course, onClose, onStartModule }) {
-  const path = PATHS[course.slug];
+function QuizModal({ questions, badgeId, onFinish }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const [earnedBadge, setEarnedBadge] = useState(false);
 
-  // Safety: path not configured yet
-  if (!path) {
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [wasCorrect, setWasCorrect] = useState(null);
+
+  const currentQuestion = questions[currentIndex];
+
+  const handleAnswerClick = (answer, idx) => {
+    if (selectedIndex !== null) return; // déjà répondu
+
+    setSelectedIndex(idx);
+    const correct = answer.correct;
+    setWasCorrect(correct);
+
+    if (correct) {
+      setScore((s) => s + 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex((i) => i + 1);
+      setSelectedIndex(null);
+      setWasCorrect(null);
+    } else {
+      // dernière question : on termine
+      setFinished(true);
+      setEarnedBadge(score === questions.length);
+    }
+  };
+
+  const handleFinish = () => {
+    onFinish({
+      score,
+      badgeId: earnedBadge ? badgeId : null,
+    });
+  };
+
+  if (finished) {
     return (
-      <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
-        <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df] relative">
-          {/* Bouton close en haut à droite */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-sm text-[#2e4053]/60 hover:text-[#2e4053]"
-          >
-            ✕
-          </button>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-2 sm:px-4">
+        <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-[#eae4df] p-4 sm:p-6 space-y-4">
+          <div className="flex flex-col items-center text-center gap-4">
+            {earnedBadge && (
+              <>
+                <div className="flex flex-col items-center gap-2">
+                  <img
+                    src={digiWelldone}
+                    alt="Digi says well done"
+                    className="h-24 w-auto drop-shadow-md"
+                  />
+                  <p className="text-sm font-semibold text-[#2e4053]">
+                    Digi: well done! You unlocked a new badge.
+                  </p>
+                </div>
 
-          <div className="flex justify-between items-center mb-3 pr-6">
-            <h2 className="text-sm font-semibold text-[#2e4053]">
-              Path not yet configured
-            </h2>
+                <img
+                  src={badgeOnlineBankStarter}
+                  alt="Online Bank Starter badge"
+                  className="h-40 w-auto drop-shadow-lg spin-once"
+                />
+              </>
+            )}
+
+            {!earnedBadge && (
+              <p className="text-sm font-semibold text-[#2e4053]">
+                Thank you for completing the quiz.
+              </p>
+            )}
+
+            <p className="text-xs text-[#2e4053]/70">
+              You scored {score} out of {questions.length}.
+            </p>
           </div>
-          <p className="text-xs text-[#2e4053]/70">
-            The learning path for this course will be added later.
-          </p>
+
+          <div className="flex justify-center mt-2">
+            <button
+              onClick={handleFinish}
+              className="inline-flex items-center gap-2 rounded-full bg-[#ef7d00] px-5 py-2 text-xs font-semibold text-white hover:bg-[#f9b13c] transition"
+            >
+              Back to my learning
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Current step = one marked as "current" or the first
+  const correctIndex = currentQuestion.answers.findIndex((a) => a.correct);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-2 sm:px-4">
+      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-[#eae4df] p-4 sm:p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-[#2e4053] flex items-center gap-2">
+          <span>📝 Quick check</span>
+          <span className="text-[11px] text-[#2e4053]/60">
+            Module 1 – Introduction to online banking
+          </span>
+        </h2>
+
+        <div>
+          <p className="text-xs text-[#2e4053]/60 mb-1">
+            Question {currentIndex + 1} of {questions.length}
+          </p>
+          <p className="text-sm font-medium text-[#2e4053]">
+            {currentQuestion.question}
+          </p>
+        </div>
+
+        <div className="space-y-2 mt-2">
+          {currentQuestion.answers.map((answer, idx) => {
+            const isSelected = selectedIndex === idx;
+            const isCorrectAnswer = idx === correctIndex;
+
+            let classes =
+              "w-full text-left px-3 py-2 rounded-xl border text-xs transition ";
+
+            if (selectedIndex === null) {
+              classes +=
+                "border-[#eae4df] bg-[#f7f4f0] text-[#2e4053] hover:bg-[#ef7d00] hover:text-white hover:border-[#ef7d00]";
+            } else {
+              if (isCorrectAnswer) {
+                classes +=
+                  "border-green-500 bg-green-50 text-[#2e4053] font-semibold";
+              } else if (isSelected && !answer.correct) {
+                classes += "border-red-500 bg-red-50 text-[#2e4053]";
+              } else {
+                classes += "border-[#eae4df] bg-white text-[#2e4053]/70";
+              }
+            }
+
+            return (
+              <button
+                key={idx}
+                onClick={() => handleAnswerClick(answer, idx)}
+                className={classes}
+                disabled={selectedIndex !== null}
+              >
+                {answer.text}
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedIndex !== null && (
+          <div className="mt-3 flex flex-col gap-2">
+            <p className="text-xs text-[#2e4053]/80">
+              {wasCorrect
+                ? "✅ Correct!"
+                : `❌ Not quite. The correct answer was: "${currentQuestion.answers[correctIndex].text}".`}
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={handleNext}
+                className="inline-flex items-center gap-2 rounded-full bg-[#ef7d00] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#f9b13c] transition"
+              >
+                {currentIndex === questions.length - 1
+                  ? "Finish quiz"
+                  : "Next question"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- PATH MODAL ---------- */
+
+function PathModal({ course, badges, onClose, onStartModule }) {
+  const path = PATHS[course.slug];
+  if (!path) return null;
+
+  const hasOnlineBankStarter = badges?.some(
+    (b) => b.id === "online-bank-starter"
+  );
+
+  // Statuts dynamiques en fonction du badge
+  const stepsWithStatus = path.steps.map((step, index) => {
+    if (!hasOnlineBankStarter) {
+      // Avant badge : step 1 active, le reste verrouillé
+      if (index === 0) return { ...step, status: "current" };
+      return { ...step, status: "locked" };
+    } else {
+      // Après badge : step 1 fait, step 2 active
+      if (index === 0) return { ...step, status: "done" };
+      if (index === 1) return { ...step, status: "current" };
+      return { ...step, status: "locked" };
+    }
+  });
+
   const currentStep =
-    path.steps.find((s) => s.status === "current") ?? path.steps[0];
+    stepsWithStatus.find((s) => s.status === "current") ?? stepsWithStatus[0];
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df] relative">
-        {/* Bouton close en haut à droite */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-sm text-[#2e4053]/60 hover:text-[#2e4053]"
-        >
-          ✕
-        </button>
-
+      <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-xl border border-[#eae4df]">
         {/* Header avec Digi */}
-        <div className="flex justify-between items-start gap-4 mb-4 pr-6">
+        <div className="flex justify-between items-start gap-4 mb-4">
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-[#2e4053]">
               {path.title}
@@ -515,26 +862,27 @@ function PathModal({ course, onClose, onStartModule }) {
             </p>
           </div>
 
-          <img
-            src={digiGuide}
-            alt="Digi, your learning guide"
-            className="h-12 w-auto"
-          />
+          <div className="flex flex-col items-end gap-2">
+            <img
+              src={digiGuide}
+              alt="Digi, your learning guide"
+              className="h-12 w-auto"
+            />
+            <button
+              onClick={onClose}
+              className="text-sm text-[#2e4053]/60 hover:text-[#2e4053]"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        {/* Steps + Launch button */}
-        <div className="flex flex-col items-center gap-4 mt-2">
-          <div className="flex items-center justify-between w-full overflow-x-auto pb-2">
-            {path.steps.map((step, index) => (
-              <PathStep
-                key={step.id}
-                step={step}
-                isLast={index === path.steps.length - 1}
-              />
-            ))}
-          </div>
+        {/* Chemin zigzag */}
+        <PathJourneyZigzag steps={stepsWithStatus} />
 
-          {currentStep.launchUrl && (
+        {/* Bouton de lancement */}
+        <div className="mt-4 flex flex-col items-center gap-2">
+          {currentStep.launchUrl ? (
             <button
               onClick={() => {
                 onStartModule(currentStep.launchUrl);
@@ -544,11 +892,15 @@ function PathModal({ course, onClose, onStartModule }) {
             >
               ▶ Start lesson: {currentStep.title}
             </button>
+          ) : (
+            <p className="text-[11px] text-[#2e4053]/60 text-center">
+              This step will be available soon.
+            </p>
           )}
 
           <p className="text-[11px] text-[#2e4053]/70 text-center">
-            Start with the first step. Each lesson will unlock the next one in
-            your path.
+            Follow the path step by step. Completing a quiz can unlock the next
+            module.
           </p>
         </div>
       </div>
@@ -556,9 +908,42 @@ function PathModal({ course, onClose, onStartModule }) {
   );
 }
 
-function PathStep({ step, isLast }) {
+function PathJourneyZigzag({ steps }) {
+  // petits offsets pour faire un chemin en S
+  const OFFSETS = ["ml-0", "ml-10", "ml-4", "ml-12", "ml-6", "ml-10"];
+
+  return (
+    <div className="mt-4">
+      <div className="relative">
+        {/* Ligne pointillée verticale en fond */}
+        <div className="absolute left-5 top-3 bottom-3 border-l-2 border-dashed border-[#f4c27b]" />
+
+        <div className="space-y-6">
+          {steps.map((step, index) => (
+            <div
+              key={step.id}
+              className={
+                "relative flex items-center " + (OFFSETS[index] || "ml-0")
+              }
+            >
+              <PathBubble step={step} />
+
+              {/* Petit segment horizontal pour l'effet "route" */}
+              {index !== steps.length - 1 && (
+                <div className="ml-2 flex-1 h-px border-t border-dashed border-[#f4c27b]" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PathBubble({ step }) {
   const isCurrent = step.status === "current";
   const isLocked = step.status === "locked";
+  const isDone = step.status === "done";
 
   const bubbleClasses = isCurrent
     ? "bg-[#ef7d00] text-white border-[#ef7d00]"
@@ -566,30 +951,27 @@ function PathStep({ step, isLast }) {
     ? "bg-white text-[#2e4053]/50 border-[#eae4df]"
     : "bg-[#0e5988] text-white border-[#0e5988]";
 
+  const icon = isLocked ? "🔒" : isDone ? "✓" : step.id;
+
   return (
-    <div className="flex items-center min-w-[110px]">
-      <div className="flex flex-col items-center gap-1">
-        <div
-          className={
-            "h-10 w-10 rounded-full border flex items-center justify-center text-xs font-semibold shadow-sm " +
-            bubbleClasses
-          }
-        >
-          {isLocked ? "🔒" : step.id}
-        </div>
-        <div className="text-[10px] text-center text-[#2e4053]/80 max-w-[90px] leading-tight">
+    <div className="flex items-center gap-3">
+      <div
+        className={
+          "h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold shadow-sm " +
+          bubbleClasses
+        }
+      >
+        {icon}
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold text-[#2e4053]">
           {step.title}
         </div>
-        <div className="text-[9px] text-[#9f8972]">{step.duration}</div>
+        <div className="text-[10px] text-[#9f8972]">{step.duration}</div>
       </div>
-
-      {!isLast && (
-        <div className="flex-1 h-px bg-[#eae4df] mx-2 hidden sm:block" />
-      )}
     </div>
   );
 }
-
 
 /* ---------- LEARNING MODULE VIEWER ---------- */
 

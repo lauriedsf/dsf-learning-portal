@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes spin-once {
+  from {
+    transform: rotate(0deg) scale(0.9);
+  }
+  to {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.spin-once {
+  animation: spin-once 2s ease-out 1;
+  transform-origin: center;
+}
